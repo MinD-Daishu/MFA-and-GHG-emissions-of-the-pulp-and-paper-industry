@@ -1,0 +1,73 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Oct 20 16:07:23 2020
+
+@author: zhongguodaishu
+"""
+#导入所需包
+import pandas as pd
+import numpy as np
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+#设置工作路径
+import os
+os.chdir('D:\\坚果云同步文件夹\\PythonBook\\GlobalPaper')
+os.getcwd()    #获取当前工作目录
+
+#导入数据
+data = pd.read_excel( 'Global production and trade_excludes regions.xlsx',sheet_name='Forestry_All Data' )
+df0=pd.DataFrame(data)
+df0.fillna(0)
+#导入地区
+AreaName=pd.read_excel('Global production and trade_excludes regions.xlsx',sheet_name='Nations')
+
+#用循环解决重复问题
+#构建遍历产品名单
+Product=['Pulp for paper','Pulp from fibres other than wood','Recovered fibre pulp','Wood pulp',
+         'Chemical wood pulp','Mechanical and semi-chemical wood pulp','Mechanical wood pulp',
+         'Newsprint','Household and sanitary papers','Printing and writing papers',
+         'Graphic papers','Recovered paper','Wrapping papers','Other paper and paperboard',
+         'Packaging paper and paperboard','Paper and paperboard']
+Element=['Production','Import Quantity','Export Quantity']
+for i in Product:
+    Item=df0.loc[(df0['Item']==i)]
+    for j in Element:
+        ItemE=Item.loc[(Item['Element']==j)]
+        ItemE=pd.merge(AreaName,ItemE,on=['Area'],how='left')#合并地区名称和数据
+        del ItemE['Item']
+        del ItemE['Element']
+        ItemE=ItemE.fillna(0)
+        ItemETobject=ItemE.T
+        ItemET=ItemETobject.iloc[1:60,:].apply(pd.to_numeric)
+        ItemET.columns=ItemE.iloc[:,0]#需要把列标签改成地区
+        writer=pd.ExcelWriter('OUT/'+i+'_'+j[0]+'.xlsx')
+        ItemET.to_excel(writer,sheet_name=i[0:29]+'_'+j[0])
+        writer.save()
+        #按照2019年数据排序
+        ItemEsort=ItemET.sort_values(by=2019,axis=1,ascending=False, inplace=False, na_position='last')
+        #选前50名
+        ItemEMax50=ItemEsort.iloc[:,0:50]
+        ###画图专用代码###
+        #绘制折线图，下面的命令要一起运行才能在一页上
+        DataforPlot=ItemEMax50
+        plt.plot(DataforPlot)
+        plt.title(i+" "+j)
+        plt.legend(DataforPlot.columns,bbox_to_anchor=(0, -0.2), loc=2)
+        plt.xlabel("Year")
+        plt.ylabel(j+" "+":tons")
+        plt.margins(0.03,0.03,tight=True)
+        plt.savefig("OUT/Figures/"+i+j+"Max50_Lineplot.jpg",dpi=600,bbox_inches = 'tight', pad_inches = 0.5)
+        plt.clf()#添加上这一行，画完第一个图后，重置一下
+        #绘制堆积图
+        DataforPlot.plot.area(stacked=True)
+        plt.title(i+" "+j)
+        plt.legend(DataforPlot.columns,bbox_to_anchor=(0, -0.2), loc=2)
+        plt.xlabel("Year")
+        plt.ylabel(j+" "+":tons")
+        plt.margins(0.03,0.03,tight=True)
+        plt.savefig("OUT/Figures/"+i+j+"Max50_Areaplot.jpg",dpi=600,bbox_inches = 'tight', pad_inches = 0.5)
+        plt.clf()#添加上这一行，画完第一个图后，重置一下
+
+
